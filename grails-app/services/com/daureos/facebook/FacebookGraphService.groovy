@@ -1,8 +1,11 @@
 package com.daureos.facebook
 
-import org.apache.commons.codec.digest.DigestUtils
-
 import grails.converters.JSON
+import javax.crypto.Mac
+import javax.crypto.SecretKey
+import javax.crypto.spec.SecretKeySpec
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.digest.DigestUtils
 import org.springframework.web.context.request.RequestContextHolder
 
 /**
@@ -60,6 +63,40 @@ class FacebookGraphService {
 		
 		return result
 	}
+
+
+    /**
+	 * This method validates a facebook session
+	 */
+	def validateOAuth2Data(facebookData) {
+		def sig, expectedSig
+		def result
+        def data,pair
+
+		if(!grailsApplication.config.facebook.applicationSecret) {
+			log.error("facebook.applicationSecret not defined in the Config.groovy")
+		} else {
+			// make sure some essential fields exist
+            def signedRequest = facebookData['signedRequest']
+            pair = signedRequest.tokenize(".")
+            sig = pair[0]
+            data = pair[1]
+			if(sig) {
+
+				log.debug("Facebook data exists in the session")
+
+				if(validateSigOAuth2(data, grailsApplication.config.facebook.applicationSecret,sig)) {
+					// The session is valid
+					result = ["uid":facebookData.userID,"access_token":facebookData.accessToken]
+					//result.sig = sig
+					log.debug("The facebook data is valid")
+				}
+			}
+		}
+
+		return result
+	}
+
 
 	/**
 	 * This method returns the facebookData stored in the session
@@ -400,6 +437,47 @@ class FacebookGraphService {
 		
 		return DigestUtils.md5Hex(base)
 	}
+
+    /**
+	 * Generate a signature for the given params and secret.
+	 *
+	 * @param facebookData the parameters to sign
+	 * @param secret the secret to sign with
+	 * @return String the generated signature
+	 */
+	private def validateSigOAuth2(data, secret, encoded_sig) {
+
+        def decoded_data = new Base64(true).decode(data)
+        def decoded_sig = new Base64(true).decode(encoded_sig)
+        def decoded_string = new String(decoded_data);
+        def envelope = JSON.parse(decoded_string)
+
+
+        String algorithm = (String) envelope.get("algorithm");
+
+        if (!algorithm.equals("HMAC-SHA256")) {
+          return false
+        }
+
+
+
+        byte[] key = secret.getBytes();
+        SecretKey hmacKey = new SecretKeySpec(key, "HMACSHA256");
+        Mac mac = Mac.getInstance("HMACSHA256");
+        mac.init(hmacKey);
+        byte[] digest = mac.doFinal(data.getBytes());
+
+
+
+        if (!Arrays.equals(decoded_sig, digest)) {
+          return false
+        }
+
+        return true;
+
+	}
+
+
 
 	/**
 	 * Apply default values to parameters that were not given

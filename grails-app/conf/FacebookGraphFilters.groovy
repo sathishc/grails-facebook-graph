@@ -1,3 +1,5 @@
+import grails.converters.JSON
+
 class FacebookGraphFilters {
 	
 	// Injected by grails
@@ -10,7 +12,8 @@ class FacebookGraphFilters {
 		facebook(controller:"*", action:"*") {
 			before = {
 				def pair, sig, payload = ""
-				def cookieName = "fbs_" + grailsApplication.config.facebook.applicationId
+				//def cookieName = "fbsr_" + grailsApplication.config.facebook.applicationId
+                def cookieName = "authStore"
 				
 				log.debug("Executing facebook filter")
 				
@@ -21,12 +24,9 @@ class FacebookGraphFilters {
 				session.facebook = [:] // Without cookie we remove the session data
 				if(cookie) {
                     def facebook = [:] // Don't write to session directly as that may cause NullPointerExceptions
-					cookie.value.split("&").each{
-						pair = it.split("=")
-						facebook[pair[0]] = pair[1].decodeURL()
-					}
-					
-					session.facebook = facebookGraphService.validateSession(facebook)
+
+                    def cookieValue = JSON.parse(cookie.value.decodeURL());
+					session.facebook = facebookGraphService.validateOAuth2Data(cookieValue)
 				}
 			}
 		}
