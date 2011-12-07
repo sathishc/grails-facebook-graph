@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Grails-facebook-graph.iml" filepath="$PROJECT_DIR$/Grails-facebook-graph.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Grails-facebook-graph-grailsPlugins.iml" filepath="$PROJECT_DIR$/Grails-facebook-graph-grailsPlugins.iml" />
     </modules>
   </component>
 </project>

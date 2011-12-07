@@ -4,7 +4,6 @@ import grails.converters.JSON
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
-import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.DigestUtils
 import org.springframework.web.context.request.RequestContextHolder
 
@@ -446,20 +445,17 @@ class FacebookGraphService {
 	 * @return String the generated signature
 	 */
 	private def validateSigOAuth2(data, secret, encoded_sig) {
-
-        def decoded_data = new Base64(true).decode(data)
-        def decoded_sig = new Base64(true).decode(encoded_sig)
-        def decoded_string = new String(decoded_data);
+        byte[] decoded_data = data.replaceAll(/\-_/,'+').decodeBase64()
+        byte[] decoded_sig = encoded_sig.replaceAll(/\-_/,'+').decodeBase64()
+        String decoded_string = new String(decoded_data);
         def envelope = JSON.parse(decoded_string)
 
 
-        String algorithm = (String) envelope.get("algorithm");
+        def algorithm = envelope.get("algorithm");
 
         if (!algorithm.equals("HMAC-SHA256")) {
           return false
         }
-
-
 
         byte[] key = secret.getBytes();
         SecretKey hmacKey = new SecretKeySpec(key, "HMACSHA256");
@@ -467,14 +463,11 @@ class FacebookGraphService {
         mac.init(hmacKey);
         byte[] digest = mac.doFinal(data.getBytes());
 
-
-
         if (!Arrays.equals(decoded_sig, digest)) {
           return false
         }
 
         return true;
-
 	}
 
 
